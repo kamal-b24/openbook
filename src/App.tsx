@@ -65,7 +65,9 @@ export default function App() {
             const result = await analyzeQuestion(base64, selectedFile.type, lang);
             setAnswer(result || "No solution found.");
           } catch (err: any) {
-            setError("Failed to solve the question. Please ensure the photo is clear.");
+            console.error(err);
+            const msg = err.message || "Failed to solve the question.";
+            setError(`${msg} (Tip: If you just added the API key to Vercel, you MUST redeploy your app for it to work.)`);
           } finally {
             setIsAnalyzing(false);
           }
@@ -74,7 +76,8 @@ export default function App() {
       }
     } catch (err: any) {
       console.error(err);
-      setError("Failed to solve the question. Please ensure the photo is clear.");
+      const msg = err.message || "Failed to solve the question.";
+      setError(`${msg} (Tip: If you just added the API key to Vercel, you MUST redeploy your app for it to work.)`);
     } finally {
       setIsAnalyzing(false);
     }

@@ -1,10 +1,10 @@
 import { GoogleGenAI } from "@google/genai";
 
-const apiKey = process.env.GEMINI_API_KEY;
+const apiKey = process.env.GEMINI_API_KEY || (import.meta as any).env?.VITE_GEMINI_API_KEY;
 
 export async function analyzeQuestion(fileBase64: string, mimeType: string, language: 'English' | 'Nepali') {
   if (!apiKey) {
-    throw new Error("GEMINI_API_KEY is not set");
+    throw new Error("GEMINI_API_KEY is not set. Please check your environment variables.");
   }
   
   const ai = new GoogleGenAI({ apiKey });
