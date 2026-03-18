@@ -4,10 +4,14 @@ import { Book, Info, RefreshCw } from 'lucide-react';
 import { FileUploader } from './components/FileUploader';
 import { LanguageSelector } from './components/LanguageSelector';
 import { AnalysisView } from './components/AnalysisView';
+import { ImageCropper } from './components/ImageCropper';
 import { analyzeQuestion } from './services/gemini';
 
 export default function App() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [croppedImage, setCroppedImage] = useState<string | null>(null);
+  const [showCropper, setShowCropper] = useState(false);
   const [language, setLanguage] = useState<'English' | 'Nepali' | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [answer, setAnswer] = useState<string | null>(null);
@@ -18,38 +22,69 @@ export default function App() {
     setAnswer(null);
     setError(null);
     setLanguage(null);
+    setCroppedImage(null);
+
+    if (file.type.startsWith('image/')) {
+      const reader = new FileReader();
+      reader.onload = () => {
+        setPreviewUrl(reader.result as string);
+        setShowCropper(true);
+      };
+      reader.readAsDataURL(file);
+    } else {
+      // For PDFs, skip cropping
+      setPreviewUrl(null);
+      setShowCropper(false);
+    }
+  };
+
+  const handleCropComplete = (cropped: string) => {
+    setCroppedImage(cropped);
+    setShowCropper(false);
   };
 
   const handleLanguageSelect = async (lang: 'English' | 'Nepali') => {
-    if (!selectedFile) return;
+    if (!selectedFile && !croppedImage) return;
     
     setLanguage(lang);
     setIsAnalyzing(true);
     setError(null);
 
     try {
-      const reader = new FileReader();
-      reader.readAsDataURL(selectedFile);
-      reader.onload = async () => {
-        const base64 = reader.result as string;
-        try {
-          const result = await analyzeQuestion(base64, selectedFile.type, lang);
-          setAnswer(result || "No solution found.");
-        } catch (err: any) {
-          console.error(err);
-          setError("Failed to solve the question. Please ensure the photo is clear.");
-        } finally {
-          setIsAnalyzing(false);
-        }
-      };
-    } catch (err) {
-      setError("Error reading file.");
+      const finalImage = croppedImage || previewUrl;
+      if (finalImage) {
+        const result = await analyzeQuestion(finalImage, 'image/jpeg', lang);
+        setAnswer(result || "No solution found.");
+      } else if (selectedFile) {
+        // Handle PDF or non-image files
+        const reader = new FileReader();
+        reader.readAsDataURL(selectedFile);
+        reader.onload = async () => {
+          const base64 = reader.result as string;
+          try {
+            const result = await analyzeQuestion(base64, selectedFile.type, lang);
+            setAnswer(result || "No solution found.");
+          } catch (err: any) {
+            setError("Failed to solve the question. Please ensure the photo is clear.");
+          } finally {
+            setIsAnalyzing(false);
+          }
+        };
+        return;
+      }
+    } catch (err: any) {
+      console.error(err);
+      setError("Failed to solve the question. Please ensure the photo is clear.");
+    } finally {
       setIsAnalyzing(false);
     }
   };
 
   const reset = () => {
     setSelectedFile(null);
+    setPreviewUrl(null);
+    setCroppedImage(null);
+    setShowCropper(false);
     setLanguage(null);
     setAnswer(null);
     setError(null);
@@ -57,6 +92,15 @@ export default function App() {
 
   return (
     <div className="min-h-screen flex flex-col bg-[#FDFCF8]">
+      {/* Cropper Modal */}
+      {showCropper && previewUrl && (
+        <ImageCropper
+          image={previewUrl}
+          onCropComplete={handleCropComplete}
+          onCancel={() => setShowCropper(false)}
+        />
+      )}
+
       {/* Header */}
       <header className="py-6 px-4 sticky top-0 bg-[#FDFCF8]/80 backdrop-blur-md z-10 border-b border-slate-100">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
@@ -71,7 +115,7 @@ export default function App() {
           </div>
           
           <div className="flex items-center gap-2">
-            {selectedFile && (
+            {(selectedFile || croppedImage) && (
               <button 
                 onClick={reset}
                 className="p-2 bg-slate-100 hover:bg-slate-200 rounded-full text-slate-600 transition-all"
@@ -119,7 +163,9 @@ export default function App() {
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.95 }}
               >
-                <LanguageSelector onSelect={handleLanguageSelect} />
+                <div className="flex flex-col items-center gap-6">
+                  <LanguageSelector onSelect={handleLanguageSelect} />
+                </div>
               </motion.section>
             ) : (
               <motion.section

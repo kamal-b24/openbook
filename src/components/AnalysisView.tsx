@@ -1,5 +1,6 @@
 import React from 'react';
 import Markdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { motion } from 'motion/react';
 import { BookOpen, Loader2, Download, Share2 } from 'lucide-react';
 
@@ -69,8 +70,8 @@ export const AnalysisView: React.FC<AnalysisViewProps> = ({ isLoading, answer, e
           </div>
         </div>
 
-        <div className="markdown-body">
-          <Markdown>{answer}</Markdown>
+        <div className="markdown-body prose prose-slate max-w-none">
+          <Markdown remarkPlugins={[remarkGfm]}>{answer}</Markdown>
         </div>
         
         <div className="mt-12 pt-6 border-t border-slate-50 flex flex-col sm:flex-row items-center justify-between gap-4 text-[10px] text-slate-400 font-bold uppercase tracking-widest">
