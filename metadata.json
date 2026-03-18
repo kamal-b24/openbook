@@ -1,0 +1,5 @@
+{
+  "name": "Open Book",
+  "description": "An AI-powered study assistant for Tribhuvan University BBS 4th-year students. Upload or capture questions to get accurate answers based on the syllabus.",
+  "requestFramePermissions": ["camera"]
+}
