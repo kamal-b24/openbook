@@ -66,8 +66,7 @@ export default function App() {
             setAnswer(result || "No solution found.");
           } catch (err: any) {
             console.error(err);
-            const msg = err.message || "Failed to solve the question.";
-            setError(`${msg} (Tip: If you just added the API key to Vercel, you MUST redeploy your app for it to work.)`);
+            handleError(err);
           } finally {
             setIsAnalyzing(false);
           }
@@ -76,11 +75,33 @@ export default function App() {
       }
     } catch (err: any) {
       console.error(err);
-      const msg = err.message || "Failed to solve the question.";
-      setError(`${msg} (Tip: If you just added the API key to Vercel, you MUST redeploy your app for it to work.)`);
+      handleError(err);
     } finally {
       setIsAnalyzing(false);
     }
+  };
+
+  const handleError = (err: any) => {
+    let msg = err.message || "Failed to solve the question.";
+    
+    // Check if it's a JSON error from Gemini
+    try {
+      if (msg.includes('{')) {
+        const jsonMatch = msg.match(/\{.*\}/s);
+        if (jsonMatch) {
+          const errorData = JSON.parse(jsonMatch[0]);
+          if (errorData.error?.code === 429 || errorData.code === 429) {
+            msg = "⚠️ Quota Exceeded: You've reached the limit of the free version. Please wait 1 minute and try again.";
+          } else if (errorData.error?.message) {
+            msg = errorData.error.message;
+          }
+        }
+      }
+    } catch (e) {
+      // Fallback to original message if parsing fails
+    }
+
+    setError(`${msg} (Tip: If you just added the API key to Vercel, you MUST redeploy your app for it to work.)`);
   };
 
   const reset = () => {
